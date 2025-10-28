@@ -6,13 +6,23 @@ from dotenv import load_dotenv
 from collections import defaultdict, deque
 import time
 
+print("🔍 DEBUG: Script démarré !")
+
+print("🔍 DEBUG: Chargement des variables d'environnement...")
 load_dotenv()
+print("🔍 DEBUG: Variables chargées !")
 
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 ADMIN_CHAT_ID = int(os.getenv("ADMIN_CHAT_ID"))
 GROUP_ID = int(os.getenv("GROUP_ID"))
 RENDER_EXTERNAL_URL = "https://guidedutrading-bot.onrender.com"
 PORT = int(os.getenv("PORT", 8443))
+
+print(f"🔍 DEBUG: BOT_TOKEN = {'[PRÉSENT]' if BOT_TOKEN else '[ABSENT]'}")
+print(f"🔍 DEBUG: ADMIN_CHAT_ID = {ADMIN_CHAT_ID}")
+print(f"🔍 DEBUG: GROUP_ID = {GROUP_ID}")
+print(f"🔍 DEBUG: RENDER_EXTERNAL_URL = {RENDER_EXTERNAL_URL}")
+print(f"🔍 DEBUG: PORT = {PORT}")
 
 # ADMINS - Exemptés de modération
 ADMINS = [4943731, 7580303994]
@@ -485,14 +495,20 @@ def main():
     print("🚀 @GuideDuTrading_bot - VERSION WEBHOOK RENDER")
     print("=" * 70)
     
+    print("🔍 DEBUG: Début de la fonction main()")
+    
     if not BOT_TOKEN:
+        print("❌ ERROR: BOT_TOKEN manquant !")
         raise ValueError("❌ BOT_TOKEN manquant !")
     
     print(f"🌐 URL: {RENDER_EXTERNAL_URL}")
     print(f"📍 Port: {PORT}")
     
+    print("🔍 DEBUG: Création de l'application...")
     app = Application.builder().token(BOT_TOKEN).build()
+    print("🔍 DEBUG: Application créée !")
     
+    print("🔍 DEBUG: Ajout des handlers...")
     app.add_handler(CommandHandler("start", start_command))
     app.add_handler(ChatMemberHandler(detect_new_member, ChatMemberHandler.CHAT_MEMBER))
     app.add_handler(CallbackQueryHandler(button_callback))
@@ -508,6 +524,7 @@ def main():
     app.add_handler(CommandHandler("ban", ban_command))
     app.add_handler(CommandHandler("mute", mute_command))
     app.add_handler(CommandHandler("stats", stats_command))
+    print("🔍 DEBUG: Handlers ajoutés !")
     
     print("✅ BOT ACTIF!")
     print("🛡️ MODÉRATION : Active")
@@ -525,6 +542,7 @@ def main():
     print("🚀 Démarrage en mode WEBHOOK...")
     print("=" * 70)
     
+    print("🔍 DEBUG: Lancement du webhook...")
     app.run_webhook(
         listen="0.0.0.0",
         port=PORT,
@@ -533,6 +551,8 @@ def main():
         allowed_updates=['message', 'message_reaction', 'message_reaction_count', 'channel_post', 'chat_member', 'callback_query'],
         drop_pending_updates=True
     )
+    print("🔍 DEBUG: Webhook lancé !")
 
 if __name__ == '__main__':
+    print("🔍 DEBUG: __main__ détecté, appel de main()")
     main()
