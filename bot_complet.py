@@ -11,7 +11,7 @@ load_dotenv()
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 ADMIN_CHAT_ID = int(os.getenv("ADMIN_CHAT_ID"))
 GROUP_ID = int(os.getenv("GROUP_ID"))
-RENDER_EXTERNAL_URL = os.getenv("RENDER_EXTERNAL_URL")
+RENDER_EXTERNAL_URL = os.getenv("RENDER_EXTERNAL_URL", "https://guidedutrading-bot.onrender.com")
 PORT = int(os.getenv("PORT", 8443))
 
 # ADMINS - Exemptés de modération
@@ -538,3 +538,4 @@ def main():
 
 if __name__ == '__main__':
     main()
+
