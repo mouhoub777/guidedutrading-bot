@@ -487,8 +487,6 @@ def main():
     
     if not BOT_TOKEN:
         raise ValueError("❌ BOT_TOKEN manquant !")
-    if not RENDER_EXTERNAL_URL:
-        raise ValueError("❌ RENDER_EXTERNAL_URL manquant !")
     
     print(f"🌐 URL: {RENDER_EXTERNAL_URL}")
     print(f"📍 Port: {PORT}")
@@ -538,4 +536,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-
