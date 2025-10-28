@@ -552,6 +552,7 @@ def main():
         drop_pending_updates=True
     )
     print("🔍 DEBUG: Webhook lancé !")
+    
     # Force la réinitialisation du webhook
     print("🔄 Suppression de l'ancien webhook...")
     import asyncio
@@ -561,5 +562,6 @@ def main():
     if __name__ == '__main__':
     print("🔍 DEBUG: __main__ détecté, appel de main()")
     main()
+
 
 
