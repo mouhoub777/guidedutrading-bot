@@ -15,7 +15,7 @@ print("🔍 DEBUG: Variables chargées !")
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 ADMIN_CHAT_ID = int(os.getenv("ADMIN_CHAT_ID"))
 GROUP_ID = int(os.getenv("GROUP_ID"))
-RENDER_EXTERNAL_URL = "https://guidedutrading-bot.onrender.com"
+RENDER_EXTERNAL_URL = "https://guidedutrading-bot-f663.onrender.com"
 PORT = int(os.getenv("PORT", 8443))
 
 print(f"🔍 DEBUG: BOT_TOKEN = {'[PRÉSENT]' if BOT_TOKEN else '[ABSENT]'}")
@@ -556,3 +556,4 @@ def main():
 if __name__ == '__main__':
     print("🔍 DEBUG: __main__ détecté, appel de main()")
     main()
+
