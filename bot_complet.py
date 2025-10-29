@@ -6,23 +6,11 @@ from dotenv import load_dotenv
 from collections import defaultdict, deque
 import time
 
-print("🔍 DEBUG: Script démarré !")
-
-print("🔍 DEBUG: Chargement des variables d'environnement...")
 load_dotenv()
-print("🔍 DEBUG: Variables chargées !")
 
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 ADMIN_CHAT_ID = int(os.getenv("ADMIN_CHAT_ID"))
 GROUP_ID = int(os.getenv("GROUP_ID"))
-RENDER_EXTERNAL_URL = "https://guidedutrading-bot-f663.onrender.com"
-PORT = int(os.getenv("PORT", 8443))
-
-print(f"🔍 DEBUG: BOT_TOKEN = {'[PRÉSENT]' if BOT_TOKEN else '[ABSENT]'}")
-print(f"🔍 DEBUG: ADMIN_CHAT_ID = {ADMIN_CHAT_ID}")
-print(f"🔍 DEBUG: GROUP_ID = {GROUP_ID}")
-print(f"🔍 DEBUG: RENDER_EXTERNAL_URL = {RENDER_EXTERNAL_URL}")
-print(f"🔍 DEBUG: PORT = {PORT}")
 
 # ADMINS - Exemptés de modération
 ADMINS = [4943731, 7580303994]
@@ -136,23 +124,24 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             parse_mode='HTML'
         )
         
-        GROUP_INVITE_LINK = "https://t.me/+sEW_LL0F4LQyZmY0"
-        keyboard_groupe = [[InlineKeyboardButton("👥 REJOINDRE LE GROUPE 🔥", url=GROUP_INVITE_LINK)]]
+        # SUPPRIME LE MESSAGE "Merci d'avoir répondu" ET ENVOIE DIRECTEMENT LE COMPARATIF
         await query.edit_message_text(
-            text="✅ <b>Merci d'avoir répondu !</b>\n\nVoici le lien du groupe 👇",
-            reply_markup=InlineKeyboardMarkup(keyboard_groupe),
+            text="✅ <b>Merci d'avoir répondu !</b>\n\nVoici le comparatif 👇",
             parse_mode='HTML'
         )
         
         await send_tmgm_comparison(query, context, user_id)
 
 async def send_tmgm_comparison(query, context, user_id):
-    """Envoie le comparatif complet TMGM"""
+    """Envoie le comparatif complet TMGM avec 4 BOUTONS"""
+    
+    GROUP_INVITE_LINK = "https://t.me/+sEW_LL0F4LQyZmY0"
     
     keyboard = [
         [InlineKeyboardButton("🎁 Ouvrir compte TMGM", url="https://affiliate.tmgm.com/visit/?bta=35488&brand=tmgm")],
         [InlineKeyboardButton("🎯 Tester en DÉMO", url="https://affiliate.tmgm.com/visit/?bta=35488&brand=tmgm")],
-        [InlineKeyboardButton("💬 Me contacter", url="https://t.me/Guidedutrading")]
+        [InlineKeyboardButton("💬 Me contacter", url="https://t.me/Guidedutrading")],
+        [InlineKeyboardButton("👥 REJOINDRE LE GROUPE 🔥", url=GROUP_INVITE_LINK)]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
     
@@ -211,34 +200,56 @@ async def send_tmgm_comparison(query, context, user_id):
             f"🆔 {user_id}\n"
             f"📝 @{query.from_user.username or 'N/A'}\n"
             f"📍 Source: {user_data[user_id]['source']}\n\n"
-            f"🎯 Potentiel converti TMGM"
+            f"⏳ En attente qu'il rejoigne le groupe..."
         ),
         parse_mode='HTML'
     )
 
 # ====================== MODÉRATION ======================
 
-async def add_warning(context, chat_id, user_id, username, reason):
+async def add_warning(context: ContextTypes.DEFAULT_TYPE, chat_id: int, user_id: int, username: str, reason: str):
     user_warnings[user_id] += 1
-    count = user_warnings[user_id]
+    warnings_count = user_warnings[user_id]
     
-    if count >= 3:
+    if warnings_count >= 3:
         try:
             await context.bot.ban_chat_member(chat_id=chat_id, user_id=user_id)
             msg = await context.bot.send_message(
                 chat_id=chat_id,
-                text=f"🚫 @{username} banni (3 warnings) !"
+                text=f"🚫 @{username} banni après {warnings_count} warnings !\nRaison : {reason}"
             )
+            await asyncio.sleep(5)
+            await msg.delete()
+            user_warnings[user_id] = 0
         except Exception as e:
-            print(f"Erreur: {e}")
+            print(f"Erreur ban: {e}")
     else:
         msg = await context.bot.send_message(
             chat_id=chat_id,
-            text=f"⚠️ Warning {count}/3 pour @{username}\nRaison: {reason}"
+            text=f"⚠️ Warning {warnings_count}/3 pour @{username}\nRaison : {reason}\n⚡ {3 - warnings_count} avant ban !"
         )
+        await asyncio.sleep(5)
+        await msg.delete()
+
+async def check_message_flood(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    message = update.message
+    user_id = message.from_user.id
     
-    await asyncio.sleep(5)
-    await msg.delete()
+    if user_id in ADMINS:
+        return False
+    
+    current_time = time.time()
+    last_time = user_last_message_time[user_id]
+    
+    if current_time - last_time < 2:
+        try:
+            await message.delete()
+            return True
+        except:
+            pass
+    
+    user_last_message_time[user_id] = current_time
+    return False
 
 async def check_links(update: Update, context: ContextTypes.DEFAULT_TYPE):
     message = update.message
@@ -247,13 +258,20 @@ async def check_links(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if user_id in ADMINS:
         return
     
-    try:
-        await message.delete()
-        await add_warning(context, message.chat_id, user_id,
-                        message.from_user.username or message.from_user.first_name,
-                        "Lien détecté")
-    except Exception as e:
-        print(f"Erreur: {e}")
+    if await check_message_flood(update, context):
+        return
+    
+    if message.entities:
+        for entity in message.entities:
+            if entity.type in ['url', 'text_link', 'mention']:
+                try:
+                    await message.delete()
+                    await add_warning(context, message.chat_id, user_id, 
+                                    message.from_user.username or message.from_user.first_name,
+                                    "Lien/mention interdit")
+                except Exception as e:
+                    print(f"Erreur: {e}")
+                return
 
 async def check_text_links(update: Update, context: ContextTypes.DEFAULT_TYPE):
     message = update.message
@@ -262,17 +280,22 @@ async def check_text_links(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if user_id in ADMINS:
         return
     
-    text = message.text.lower()
-    link_patterns = ['http://', 'https://', 'www.', '.com', '.fr', '.net', 't.me/']
+    if await check_message_flood(update, context):
+        return
     
-    if any(pattern in text for pattern in link_patterns):
-        try:
-            await message.delete()
-            await add_warning(context, message.chat_id, user_id,
-                            message.from_user.username or message.from_user.first_name,
-                            "Lien interdit")
-        except Exception as e:
-            print(f"Erreur: {e}")
+    if message.text:
+        text_lower = message.text.lower()
+        forbidden = ['http://', 'https://', 'www.', '.com', '.net', '.org', '.io', 
+                    '.fr', 't.me/', 'telegram.me/', '@', '.gg', 'discord', '.xyz']
+        
+        if any(p in text_lower for p in forbidden):
+            try:
+                await message.delete()
+                await add_warning(context, message.chat_id, user_id,
+                                message.from_user.username or message.from_user.first_name,
+                                "Lien/mention interdit")
+            except Exception as e:
+                print(f"Erreur: {e}")
 
 async def check_insults(update: Update, context: ContextTypes.DEFAULT_TYPE):
     message = update.message
@@ -281,16 +304,22 @@ async def check_insults(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if user_id in ADMINS:
         return
     
-    text = message.text.lower()
+    if await check_message_flood(update, context):
+        return
     
-    if any(word in text for word in BANNED_WORDS):
-        try:
-            await message.delete()
-            await add_warning(context, message.chat_id, user_id,
-                            message.from_user.username or message.from_user.first_name,
-                            "Langage inapproprié")
-        except Exception as e:
-            print(f"Erreur: {e}")
+    if message.text:
+        text_lower = message.text.lower()
+        
+        for word in BANNED_WORDS:
+            if word in text_lower:
+                try:
+                    await message.delete()
+                    await add_warning(context, message.chat_id, user_id,
+                                    message.from_user.username or message.from_user.first_name,
+                                    "Langage inapproprié")
+                except Exception as e:
+                    print(f"Erreur: {e}")
+                return
 
 async def check_spam(update: Update, context: ContextTypes.DEFAULT_TYPE):
     message = update.message
@@ -299,19 +328,26 @@ async def check_spam(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if user_id in ADMINS:
         return
     
-    current_time = time.time()
-    user_messages[user_id].append(current_time)
+    if await check_message_flood(update, context):
+        return
     
-    if len(user_messages[user_id]) >= 5:
-        time_diff = current_time - user_messages[user_id][0]
-        if time_diff < 10:
-            try:
-                await message.delete()
-                await add_warning(context, message.chat_id, user_id,
-                                message.from_user.username or message.from_user.first_name,
-                                "Spam détecté")
-            except Exception as e:
-                print(f"Erreur: {e}")
+    if message.text:
+        current_time = time.time()
+        user_history = user_messages[user_id]
+        
+        user_history.append({'text': message.text, 'time': current_time})
+        recent = [m for m in user_history if current_time - m['time'] < 10]
+        
+        if len(recent) >= 3:
+            same = [m for m in recent if m['text'] == message.text]
+            if len(same) >= 2:
+                try:
+                    await message.delete()
+                    await add_warning(context, message.chat_id, user_id,
+                                    message.from_user.username or message.from_user.first_name,
+                                    "Spam détecté")
+                except Exception as e:
+                    print(f"Erreur: {e}")
 
 async def check_caps(update: Update, context: ContextTypes.DEFAULT_TYPE):
     message = update.message
@@ -320,19 +356,24 @@ async def check_caps(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if user_id in ADMINS:
         return
     
-    if message.text:
-        text = message.text
-        if len(text) > 10:
-            caps_ratio = sum(1 for c in text if c.isupper()) / len(text)
-            if caps_ratio > 0.7:
-                try:
-                    warning = await message.reply_text(
-                        text=f"⚠️ @{message.from_user.username or message.from_user.first_name}, pas besoin de CRIER ! 🔇"
-                    )
-                    await asyncio.sleep(3)
-                    await warning.delete()
-                except Exception as e:
-                    print(f"Erreur: {e}")
+    if await check_message_flood(update, context):
+        return
+    
+    if message.text and len(message.text) > 10:
+        upper = sum(1 for c in message.text if c.isupper())
+        total = sum(1 for c in message.text if c.isalpha())
+        
+        if total > 0 and (upper / total) * 100 > 70:
+            try:
+                await message.delete()
+                warning = await context.bot.send_message(
+                    chat_id=message.chat_id,
+                    text=f"⚠️ @{message.from_user.username or message.from_user.first_name}, pas besoin de CRIER ! 🔇"
+                )
+                await asyncio.sleep(3)
+                await warning.delete()
+            except Exception as e:
+                print(f"Erreur: {e}")
 
 async def check_forwards(update: Update, context: ContextTypes.DEFAULT_TYPE):
     message = update.message
@@ -492,23 +533,11 @@ async def stats_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 def main():
     print("=" * 70)
-    print("🚀 @GuideDuTrading_bot - VERSION WEBHOOK RENDER")
+    print("🚀 @GuideDuTrading_bot - VERSION FINALE")
     print("=" * 70)
     
-    print("🔍 DEBUG: Début de la fonction main()")
-    
-    if not BOT_TOKEN:
-        print("❌ ERROR: BOT_TOKEN manquant !")
-        raise ValueError("❌ BOT_TOKEN manquant !")
-    
-    print(f"🌐 URL: {RENDER_EXTERNAL_URL}")
-    print(f"📍 Port: {PORT}")
-    
-    print("🔍 DEBUG: Création de l'application...")
     app = Application.builder().token(BOT_TOKEN).build()
-    print("🔍 DEBUG: Application créée !")
     
-    print("🔍 DEBUG: Ajout des handlers...")
     app.add_handler(CommandHandler("start", start_command))
     app.add_handler(ChatMemberHandler(detect_new_member, ChatMemberHandler.CHAT_MEMBER))
     app.add_handler(CallbackQueryHandler(button_callback))
@@ -524,7 +553,6 @@ def main():
     app.add_handler(CommandHandler("ban", ban_command))
     app.add_handler(CommandHandler("mute", mute_command))
     app.add_handler(CommandHandler("stats", stats_command))
-    print("🔍 DEBUG: Handlers ajoutés !")
     
     print("✅ BOT ACTIF!")
     print("🛡️ MODÉRATION : Active")
@@ -536,25 +564,7 @@ def main():
     print(f"👥 GROUPE : {GROUP_ID}")
     print("=" * 70)
     
-    # MODE WEBHOOK POUR RENDER
-    webhook_url = f"{RENDER_EXTERNAL_URL}/telegram"
-    print(f"🔗 Webhook URL: {webhook_url}")
-    print("🚀 Démarrage en mode WEBHOOK...")
-    print("=" * 70)
-    
-    print("🔍 DEBUG: Lancement du webhook...")
-
-    app.run_webhook(
-        listen="0.0.0.0",
-        port=PORT,
-        url_path="telegram",
-        webhook_url=webhook_url,
-        allowed_updates=['message', 'message_reaction', 'message_reaction_count', 'channel_post', 'chat_member', 'callback_query'],
-        drop_pending_updates=True
-    )
-    print("🔍 DEBUG: Webhook lancé !")
+    app.run_polling(allowed_updates=['message', 'message_reaction', 'message_reaction_count', 'channel_post', 'chat_member', 'callback_query'])
 
 if __name__ == '__main__':
-    print("🔍 DEBUG: __main__ détecté, appel de main()")
     main()
-
