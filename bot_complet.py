@@ -132,7 +132,7 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await send_tmgm_comparison(query, context, user_id)
 
 async def send_tmgm_comparison(query, context, user_id):
-    """Envoie le comparatif complet TMGM avec 4 BOUTONS puis les 2 images"""
+    """Envoie le comparatif complet TMGM avec 4 BOUTONS puis message swap puis les 2 images"""
     
     GROUP_INVITE_LINK = "https://t.me/+sEW_LL0F4LQyZmY0"
     
@@ -189,6 +189,22 @@ async def send_tmgm_comparison(query, context, user_id):
         chat_id=query.message.chat_id,
         text=message,
         reply_markup=reply_markup,
+        parse_mode='HTML'
+    )
+    
+    # NOUVEAU MESSAGE : Différence de swap
+    swap_message = (
+        f"📉 <b>DIFFÉRENCE DE SWAP - PÉTROLE (WTI)</b>\n\n"
+        f"Même taille de lots, résultats TRÈS différents :\n\n"
+        f"🔴 IronFX : -54.30€\n"
+        f"✅ TMGM : -6.24€\n\n"
+        f"💸 Économie : 48.06€ par jour\n"
+        f"📊 TMGM est 770% moins cher ! 👇"
+    )
+    
+    await context.bot.send_message(
+        chat_id=query.message.chat_id,
+        text=swap_message,
         parse_mode='HTML'
     )
     
