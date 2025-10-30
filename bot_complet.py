@@ -1,5 +1,5 @@
 import os
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, InputMediaPhoto
 from telegram.ext import Application, MessageHandler, MessageReactionHandler, filters, ContextTypes, CommandHandler, CallbackQueryHandler, ChatMemberHandler
 import asyncio
 from dotenv import load_dotenv
@@ -124,7 +124,6 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             parse_mode='HTML'
         )
         
-        # SUPPRIME LE MESSAGE "Merci d'avoir répondu" ET ENVOIE DIRECTEMENT LE COMPARATIF
         await query.edit_message_text(
             text="✅ <b>Merci d'avoir répondu !</b>\n\nVoici le comparatif 👇",
             parse_mode='HTML'
@@ -133,7 +132,7 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await send_tmgm_comparison(query, context, user_id)
 
 async def send_tmgm_comparison(query, context, user_id):
-    """Envoie le comparatif complet TMGM avec 4 BOUTONS"""
+    """Envoie le comparatif complet TMGM avec 4 BOUTONS puis les 2 images"""
     
     GROUP_INVITE_LINK = "https://t.me/+sEW_LL0F4LQyZmY0"
     
@@ -185,11 +184,23 @@ async def send_tmgm_comparison(query, context, user_id):
         f"💡 <b>Économise jusqu'à $320/mois avec TMGM !</b>"
     )
     
+    # Envoie le texte avec les boutons
     await context.bot.send_message(
         chat_id=query.message.chat_id,
         text=message,
         reply_markup=reply_markup,
         parse_mode='HTML'
+    )
+    
+    # Envoie les 2 images en album (côte à côte)
+    media_group = [
+        InputMediaPhoto(media="https://i.postimg.cc/qzdxCRZS/screenshot-2025-10-28-234349.png", caption="❌ IronFX - Swap: -54.30€"),
+        InputMediaPhoto(media="https://i.postimg.cc/VJkMjb99/screenshot-2025-10-28-234514.png", caption="✅ TMGM - Swap: -6.24€")
+    ]
+    
+    await context.bot.send_media_group(
+        chat_id=query.message.chat_id,
+        media=media_group
     )
     
     await context.bot.send_message(
