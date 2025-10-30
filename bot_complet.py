@@ -184,7 +184,7 @@ async def send_tmgm_comparison(query, context, user_id):
         f"💡 <b>Économise jusqu'à $320/mois avec TMGM !</b>"
     )
     
-    # Envoie le texte avec les boutons
+    # MESSAGE 1 : Envoie le texte avec les boutons
     await context.bot.send_message(
         chat_id=query.message.chat_id,
         text=message,
@@ -192,14 +192,14 @@ async def send_tmgm_comparison(query, context, user_id):
         parse_mode='HTML'
     )
     
-    # NOUVEAU MESSAGE : Différence de swap
+    # MESSAGE 2 : Différence de swap
     swap_message = (
         f"📉 <b>DIFFÉRENCE DE SWAP - PÉTROLE (WTI)</b>\n\n"
         f"Même taille de lots, résultats TRÈS différents :\n\n"
         f"🔴 IronFX : -54.30€\n"
         f"✅ TMGM : -6.24€\n\n"
         f"💸 Économie : 48.06€ par jour\n"
-        f"📊 TMGM est 770% moins cher ! 👇"
+        f"📊 TMGM est 8.7x moins cher ! 👇"
     )
     
     await context.bot.send_message(
@@ -208,7 +208,7 @@ async def send_tmgm_comparison(query, context, user_id):
         parse_mode='HTML'
     )
     
-    # Envoie les 2 images en album (côte à côte)
+    # MESSAGE 3 : Envoie les 2 images en album (côte à côte)
     media_group = [
         InputMediaPhoto(media="https://i.postimg.cc/qzdxCRZS/screenshot-2025-10-28-234349.png", caption="❌ IronFX - Swap: -54.30€"),
         InputMediaPhoto(media="https://i.postimg.cc/VJkMjb99/screenshot-2025-10-28-234514.png", caption="✅ TMGM - Swap: -6.24€")
